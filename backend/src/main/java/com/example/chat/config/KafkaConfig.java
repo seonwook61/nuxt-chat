@@ -5,8 +5,8 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Kafka configuration for chat message streaming
  * - Producer: Chat messages from REST API
- * - Consumer: WebSocket fanout, persistence, moderation
- * - Topics: chat.message.v1, chat.moderation.v1
+ * - Consumer: WebSocket fanout, persistence, events
+ * - Topics: chat.message.v1, chat.event.v1
  * - Key: roomId (for partition affinity)
  *
  * Implementation in Phase 1
@@ -14,13 +14,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class KafkaConfig {
 
-    // Topic definitions
+    // Topic definitions (TRD: 02-trd.md)
     public static final String TOPIC_CHAT_MESSAGE = "chat.message.v1";
-    public static final String TOPIC_CHAT_MODERATION = "chat.moderation.v1";
+    public static final String TOPIC_CHAT_EVENT = "chat.event.v1";
 
     // Consumer groups
     public static final String GROUP_WEBSOCKET_FANOUT = "websocket-fanout";
     public static final String GROUP_PERSIST_STORE = "persist-store";
-    public static final String GROUP_MODERATION = "moderation";
+    public static final String GROUP_EVENT_HANDLER = "event-handler";
 
 }
