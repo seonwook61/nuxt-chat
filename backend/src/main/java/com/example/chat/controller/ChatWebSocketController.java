@@ -1,0 +1,128 @@
+package com.example.chat.controller;
+
+import com.example.chat.config.WebSocketConfig;
+import com.example.chat.dto.ChatEvent;
+import com.example.chat.dto.ChatMessage;
+import com.example.chat.service.KafkaProducerService;
+import com.example.chat.service.RedisCacheService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Controller;
+
+/**
+ * WebSocket Controller for Real-Time Chat
+ *
+ * Handles WebSocket STOMP messages:
+ * - /app/chat.join -> handleJoin -> /topic/room/{roomId}
+ * - /app/chat.send -> handleMessage -> /topic/room/{roomId}
+ * - /app/chat.leave -> handleLeave -> /topic/room/{roomId}
+ *
+ * TDD Phase 1: Implementation to make tests GREEN
+ */
+@Controller
+@RequiredArgsConstructor
+@Slf4j
+public class ChatWebSocketController {
+
+    private final KafkaProducerService kafkaProducerService;
+    private final RedisCacheService redisCacheService;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    /**
+     * Handle user joining a room
+     * - Add user to Redis presence
+     * - Send join event via Kafka
+     * - Broadcast to all room subscribers
+     *
+     * @param event ChatEvent with userId and roomId
+     */
+    @MessageMapping("/chat.join")
+    public void handleJoin(ChatEvent event) {
+        log.info("User {} joining room {}", event.getUserId(), event.getRoomId());
+
+        try {
+            // Add user to Redis room presence
+            redisCacheService.addUserToRoom(event.getRoomId(), event.getUserId());
+
+            // Send join event to Kafka
+            kafkaProducerService.sendEvent(event);
+
+            // Broadcast to all subscribers of the room topic
+            String topic = WebSocketConfig.WS_TOPIC_PREFIX + "/room/" + event.getRoomId();
+            messagingTemplate.convertAndSend(topic, event);
+
+            log.debug("User join event broadcast: roomId={}", event.getRoomId());
+        } catch (Exception e) {
+            log.error("Error handling user join: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Handle incoming chat message
+     * - Send to Kafka for persistence
+     * - Broadcast to all room subscribers via WebSocket
+     *
+     * @param message ChatMessage from client
+     */
+    @MessageMapping("/chat.send")
+    public void handleMessage(ChatMessage message) {
+        log.info("Message from {} in room {}", message.getUserId(), message.getRoomId());
+
+        try {
+            // Send message to Kafka for persistence
+            kafkaProducerService.sendMessage(message);
+
+            // Broadcast to all subscribers of the room topic
+            String topic = WebSocketConfig.WS_TOPIC_PREFIX + "/room/" + message.getRoomId();
+            messagingTemplate.convertAndSend(topic, message);
+
+            log.debug("Message broadcast: messageId={}, roomId={}", message.getMessageId(), message.getRoomId());
+        } catch (Exception e) {
+            log.error("Error handling message: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Handle user leaving a room
+     * - Remove user from Redis presence
+     * - Send leave event via Kafka
+     * - Broadcast to all room subscribers
+     *
+     * @param event ChatEvent with userId and roomId
+     */
+    @MessageMapping("/chat.leave")
+    public void handleLeave(ChatEvent event) {
+        log.info("User {} leaving room {}", event.getUserId(), event.getRoomId());
+
+        try {
+            // Remove user from Redis room presence
+            redisCacheService.removeUserFromRoom(event.getRoomId(), event.getUserId());
+
+            // Send leave event to Kafka
+            kafkaProducerService.sendEvent(event);
+
+            // Broadcast to all subscribers of the room topic
+            String topic = WebSocketConfig.WS_TOPIC_PREFIX + "/room/" + event.getRoomId();
+            messagingTemplate.convertAndSend(topic, event);
+
+            log.debug("User leave event broadcast: roomId={}", event.getRoomId());
+        } catch (Exception e) {
+            log.error("Error handling user leave: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Exception handler for WebSocket message processing errors
+     * Logs errors without throwing (graceful error handling)
+     *
+     * @param exception Exception thrown during message processing
+     */
+    @MessageMapping("/error")
+    public void handleException(Exception exception) {
+        log.error("WebSocket error: {}", exception.getMessage(), exception);
+    }
+}
