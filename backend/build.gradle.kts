@@ -53,6 +53,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers:1.19.3")
     testImplementation("org.testcontainers:kafka:1.19.3")
     testImplementation("org.testcontainers:junit-jupiter:1.19.3")
+    testImplementation("com.redis:testcontainers-redis:2.0.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
