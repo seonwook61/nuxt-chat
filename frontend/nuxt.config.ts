@@ -3,13 +3,15 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-01-01',
   devtools: { enabled: true },
 
+  srcDir: 'app/',
+
   modules: [
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
   ],
 
   css: [
-    '~/app/assets/css/main.css'
+    '~/assets/css/main.css'
   ],
 
   runtimeConfig: {
