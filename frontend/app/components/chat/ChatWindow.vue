@@ -1,42 +1,68 @@
 <template>
   <div class="bg-white rounded-lg shadow-lg h-full flex flex-col">
     <!-- Connection status -->
-    <div v-if="!socket.connected.value" class="bg-yellow-100 text-yellow-800 px-4 py-2 text-sm">
+    <div
+      v-if="!socket.connected.value"
+      class="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-4 py-2 text-sm font-medium flex items-center gap-2"
+    >
+      <div class="w-2 h-2 bg-white rounded-full animate-pulse" />
       Connecting to chat server...
     </div>
 
     <!-- Room info -->
-    <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+    <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b border-gray-200">
       <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-800">Room: {{ roomId }}</h2>
-        <span class="text-sm text-gray-600">{{ onlineUsers }} online</span>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-md">
+            {{ roomId.charAt(0).toUpperCase() }}
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">{{ roomId }}</h2>
+            <p class="text-xs text-gray-600">
+              {{ onlineUsers }} {{ onlineUsers === 1 ? 'member' : 'members' }} online
+            </p>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Message List -->
-    <div ref="messageContainer" class="flex-1 overflow-hidden">
-      <MessageList :messages="messages" />
-    </div>
+    <MessageList
+      :messages="messages"
+      :current-user-id="currentUserId"
+      class="flex-1"
+    />
 
     <!-- Message Input -->
-    <div class="border-t border-gray-200">
-      <MessageInput @send="handleSendMessage" />
-    </div>
+    <MessageInput @send="handleSendMessage" />
   </div>
 </template>
 
 <script setup lang="ts">
+import MessageList from './MessageList.vue'
+import MessageInput from './MessageInput.vue'
+
 interface Props {
   roomId: string
 }
 
 const props = defineProps<Props>()
 
+console.log('[ChatWindow] Component mounted with roomId:', props.roomId)
+
 const socket = useSocket()
+console.log('[ChatWindow] Socket initialized:', socket)
+
 const chatRoom = useChatRoom(toRef(props, 'roomId'))
+console.log('[ChatWindow] ChatRoom initialized:', chatRoom)
+
 const messageContainer = ref<HTMLElement | null>(null)
 
-const { messages, onlineUsers, joinRoom, leaveRoom, sendMessage } = chatRoom
+const { messages, onlineUsers, currentUser, joinRoom, leaveRoom, sendMessage } = chatRoom
+console.log('[ChatWindow] Messages:', messages.value, 'Online:', onlineUsers.value)
+
+// Get current user ID from chatRoom composable
+const currentUserId = computed(() => currentUser.value.userId)
 
 const handleSendMessage = (content: string) => {
   sendMessage(content)
@@ -63,15 +89,26 @@ watch(() => props.roomId, async (newRoomId, oldRoomId) => {
 })
 
 onMounted(async () => {
+  console.log('[ChatWindow] onMounted - socket.connected:', socket.connected.value)
+
   if (socket.connected.value) {
+    console.log('[ChatWindow] Socket already connected, joining room immediately')
     await joinRoom()
   } else {
-    // Wait for connection
-    watch(() => socket.connected.value, async (connected) => {
-      if (connected) {
-        await joinRoom()
-      }
-    }, { once: true })
+    console.log('[ChatWindow] Socket not connected yet, setting up watch')
+    // Wait for connection with unref to access the actual value
+    const stopWatch = watch(
+      () => socket.connected.value,
+      async (connected) => {
+        console.log('[ChatWindow] Watch triggered - connected:', connected)
+        if (connected) {
+          console.log('[ChatWindow] Socket connected via watch, joining room')
+          await joinRoom()
+          stopWatch()
+        }
+      },
+      { immediate: true }
+    )
   }
 })
 

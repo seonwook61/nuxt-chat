@@ -10,11 +10,25 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
   const subscriptionId = ref<string | null>(null)
   const isJoined = ref(false)
 
+  // 아바타 색상 생성 함수
+  const generateAvatarColor = (userId: string) => {
+    const colors = [
+      'bg-blue-500', 'bg-green-500', 'bg-purple-500',
+      'bg-pink-500', 'bg-yellow-500', 'bg-red-500'
+    ]
+    const index = userId.charCodeAt(0) % colors.length
+    return colors[index]
+  }
+
   // Get current user info (mock for now, should come from auth)
-  const currentUser = computed(() => ({
-    userId: chatStore.currentUserId || 'user-' + Math.random().toString(36).substring(7),
-    username: chatStore.currentUsername || 'Anonymous'
-  }))
+  const currentUser = computed(() => {
+    const userId = chatStore.currentUserId || 'user-' + Math.random().toString(36).substring(7)
+    return {
+      userId,
+      username: chatStore.currentUsername || 'Anonymous',
+      avatarColor: generateAvatarColor(userId)
+    }
+  })
 
   const handleRoomMessage = (payload: Message | ChatEvent) => {
     // Check if it's a ChatMessage or ChatEvent
@@ -49,10 +63,18 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
       subscriptionId.value = socket.subscribe(destination, handleRoomMessage)
 
       // 2. Send join message AFTER subscription
+      // Format timestamp as LocalDateTime (yyyy-MM-dd'T'HH:mm:ss) without 'Z'
+      const now = new Date()
+      const timestamp = now.toISOString().substring(0, 19) // Remove milliseconds and 'Z'
+
       const payload: JoinRoomPayload = {
+        eventId: crypto.randomUUID(),
+        eventType: 'USER_JOINED',
         roomId: _roomId.value,
         userId: currentUser.value.userId,
-        username: currentUser.value.username
+        username: currentUser.value.username,
+        timestamp: timestamp,
+        metadata: {}
       }
       socket.send('/app/chat.join', payload)
 
@@ -79,9 +101,17 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
 
       // 2. Send leave message
       if (socket.connected.value) {
+        // Format timestamp as LocalDateTime (yyyy-MM-dd'T'HH:mm:ss) without 'Z'
+        const now = new Date()
+        const timestamp = now.toISOString().substring(0, 19) // Remove milliseconds and 'Z'
+
         const payload: LeaveRoomPayload = {
+          eventId: crypto.randomUUID(),
+          eventType: 'USER_LEFT',
           roomId: _roomId.value,
-          userId: currentUser.value.userId
+          userId: currentUser.value.userId,
+          timestamp: timestamp,
+          metadata: {}
         }
         socket.send('/app/chat.leave', payload)
       }
@@ -113,11 +143,18 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
     }
 
     try {
+      // Format timestamp as LocalDateTime (yyyy-MM-dd'T'HH:mm:ss) without 'Z'
+      const now = new Date()
+      const timestamp = now.toISOString().substring(0, 19) // Remove milliseconds and 'Z'
+
       const payload: SendMessagePayload = {
+        messageId: crypto.randomUUID(),
         roomId: _roomId.value,
         userId: currentUser.value.userId,
         username: currentUser.value.username,
-        content: content.trim()
+        content: content.trim(),
+        timestamp: timestamp,
+        type: 'TEXT'
       }
       socket.send('/app/chat.send', payload)
     } catch (error) {
@@ -143,6 +180,7 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
     messages: readonly(messages),
     onlineUsers: readonly(onlineUsers),
     isJoined: readonly(isJoined),
+    currentUser,
     joinRoom,
     leaveRoom,
     sendMessage
