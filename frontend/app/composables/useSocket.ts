@@ -5,6 +5,10 @@ import SockJS from 'sockjs-client'
 let stompClient: Client | null = null
 const subscriptions = new Map<string, StompSubscription>()
 
+// Shared reactive state
+const connected = ref(false)
+const connecting = ref(false)
+
 // For testing: allow reset
 export function __resetStompClient() {
   if (stompClient?.connected) {
@@ -12,11 +16,11 @@ export function __resetStompClient() {
   }
   stompClient = null
   subscriptions.clear()
+  connected.value = false
+  connecting.value = false
 }
 
 export const useSocket = () => {
-  const connected = ref(false)
-  const connecting = ref(false)
 
   const config = useRuntimeConfig()
   const wsUrl = config.public.wsUrl || 'http://localhost:8080/ws'

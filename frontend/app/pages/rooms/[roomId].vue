@@ -29,7 +29,9 @@
 
     <!-- Chat Window -->
     <div class="flex-1 container mx-auto px-4 py-6 overflow-hidden">
-      <ChatWindow :room-id="roomId" />
+      <ClientOnly>
+        <ChatWindow :room-id="roomId" />
+      </ClientOnly>
     </div>
   </div>
 </template>

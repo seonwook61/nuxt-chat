@@ -11,6 +11,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -25,6 +28,10 @@ import java.util.UUID;
  * - TEXT: Regular chat message
  * - JOIN: User joined notification
  * - LEAVE: User left notification
+ *
+ * Reactions:
+ * - Instagram-style emoji reactions (HEART, LAUGH, WOW, SAD, THUMBS_UP, FIRE)
+ * - Map structure: emoji -> Set of userIds who reacted
  *
  * @see com.example.chat.service.KafkaProducerService#sendMessage(ChatMessage)
  */
@@ -78,4 +85,12 @@ public class ChatMessage {
     @NotNull(message = "type cannot be null")
     @Pattern(regexp = "TEXT|JOIN|LEAVE", message = "type must be TEXT, JOIN, or LEAVE")
     private String type;
+
+    /**
+     * Reactions to this message
+     * Map of emoji type -> Set of user IDs who reacted with that emoji
+     * Example: {"HEART": ["user1", "user2"], "THUMBS_UP": ["user3"]}
+     */
+    @Builder.Default
+    private Map<String, Set<String>> reactions = new HashMap<>();
 }

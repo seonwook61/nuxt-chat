@@ -2,15 +2,16 @@ package com.example.chat.service.impl;
 
 import com.example.chat.config.RedisConfig;
 import com.example.chat.dto.ChatMessage;
+import com.example.chat.dto.ReactionSummary;
 import com.example.chat.service.RedisCacheService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
