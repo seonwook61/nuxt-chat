@@ -6,6 +6,8 @@ export const useChatStore = defineStore('chat', () => {
   const rooms = ref<Map<string, ChatRoom>>(new Map())
   const currentRoomId = ref<string | null>(null)
   const connected = ref(false)
+  const currentUserId = ref<string | null>(null)
+  const currentUsername = ref<string | null>(null)
 
   // Getters
   const currentRoom = computed(() => {
@@ -44,11 +46,18 @@ export const useChatStore = defineStore('chat', () => {
     connected.value = status
   }
 
+  const setCurrentUser = (userId: string, username: string) => {
+    currentUserId.value = userId
+    currentUsername.value = username
+  }
+
   return {
     // State
     rooms,
     currentRoomId,
     connected,
+    currentUserId,
+    currentUsername,
     // Getters
     currentRoom,
     currentMessages,
@@ -56,6 +65,7 @@ export const useChatStore = defineStore('chat', () => {
     setCurrentRoom,
     addMessage,
     clearRoom,
-    setConnected
+    setConnected,
+    setCurrentUser
   }
 })

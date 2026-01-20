@@ -1,48 +1,55 @@
-// Chat message types
+// Chat message types (Backend DTO format)
 export interface Message {
-  id: string
+  messageId: string
   roomId: string
   userId: string
+  username: string
   content: string
-  timestamp: number
+  timestamp: string // ISO 8601 format from backend
+  type: 'CHAT'
 }
 
-// Socket event types
-export interface ServerToClientEvents {
-  message: (message: Message) => void
-  system: (data: SystemMessage) => void
-  error: (error: ErrorMessage) => void
-  userJoined: (data: UserEvent) => void
-  userLeft: (data: UserEvent) => void
+// Chat event types (Backend DTO format)
+export interface ChatEvent {
+  eventId: string
+  roomId: string
+  userId: string
+  username: string
+  eventType: 'USER_JOINED' | 'USER_LEFT'
+  timestamp: string // ISO 8601 format
+  metadata?: Record<string, any>
 }
 
-export interface ClientToServerEvents {
-  join_room: (roomId: string) => void
-  leave_room: (roomId: string) => void
-  send_message: (data: SendMessagePayload) => void
+// STOMP message wrapper
+export interface StompMessage {
+  body: string
+  headers: Record<string, string>
+}
+
+// Chat event payloads for STOMP
+export interface ChatEventPayload {
+  roomId: string
+  userId: string
+  username: string
+  content?: string
 }
 
 export interface SendMessagePayload {
   roomId: string
+  userId: string
+  username: string
   content: string
 }
 
-export interface SystemMessage {
-  type: 'info' | 'warning' | 'error'
-  message: string
-  timestamp: number
-}
-
-export interface ErrorMessage {
-  code: string
-  message: string
-  timestamp: number
-}
-
-export interface UserEvent {
-  userId: string
+export interface JoinRoomPayload {
   roomId: string
-  timestamp: number
+  userId: string
+  username: string
+}
+
+export interface LeaveRoomPayload {
+  roomId: string
+  userId: string
 }
 
 // Chat room state
