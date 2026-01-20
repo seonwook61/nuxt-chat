@@ -1,8 +1,8 @@
 package com.example.chat.kafka;
 
 import com.example.chat.config.KafkaConfig;
-import com.example.chat.model.ChatEvent;
-import com.example.chat.model.ChatMessage;
+import com.example.chat.dto.ChatEvent;
+import com.example.chat.dto.ChatMessage;
 import com.example.chat.service.KafkaProducerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -76,7 +76,7 @@ class KafkaProducerServiceTest {
     void testSendMessage_Success() throws Exception {
         // GIVEN
         ChatMessage message = ChatMessage.builder()
-            .id(UUID.randomUUID().toString())
+            .eventId(UUID.randomUUID())
             .roomId("room-123")
             .userId("user-456")
             .username("testuser")
@@ -130,7 +130,7 @@ class KafkaProducerServiceTest {
     void testSendEvent_Success() throws Exception {
         // GIVEN
         ChatEvent event = ChatEvent.builder()
-            .id(UUID.randomUUID().toString())
+            .eventId(UUID.randomUUID())
             .roomId("room-789")
             .userId("user-101")
             .username("newuser")

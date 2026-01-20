@@ -1,6 +1,6 @@
 package com.example.chat.redis;
 
-import com.example.chat.model.ChatMessage;
+import com.example.chat.dto.ChatMessage;
 import com.example.chat.service.RedisCacheService;
 import com.redis.testcontainers.RedisContainer;
 import org.junit.jupiter.api.Test;
@@ -74,7 +74,7 @@ class RedisCacheServiceTest {
         // GIVEN
         String roomId = "room-cache-1";
         ChatMessage message = ChatMessage.builder()
-            .id(UUID.randomUUID().toString())
+            .messageId(UUID.randomUUID())
             .roomId(roomId)
             .userId("user-123")
             .username("testuser")
@@ -115,7 +115,7 @@ class RedisCacheServiceTest {
         // 3개의 메시지 캐싱
         for (int i = 1; i <= 3; i++) {
             ChatMessage message = ChatMessage.builder()
-                .id(UUID.randomUUID().toString())
+                .messageId(UUID.randomUUID())
                 .roomId(roomId)
                 .userId("user-" + i)
                 .username("user" + i)
@@ -152,7 +152,7 @@ class RedisCacheServiceTest {
         // 51개의 메시지 캐싱
         for (int i = 1; i <= 51; i++) {
             ChatMessage message = ChatMessage.builder()
-                .id(UUID.randomUUID().toString())
+                .messageId(UUID.randomUUID())
                 .roomId(roomId)
                 .userId("user-bulk")
                 .username("bulkuser")
@@ -256,7 +256,7 @@ class RedisCacheServiceTest {
         // GIVEN
         String roomId = "room-ttl-1";
         ChatMessage message = ChatMessage.builder()
-            .id(UUID.randomUUID().toString())
+            .messageId(UUID.randomUUID())
             .roomId(roomId)
             .userId("user-ttl")
             .username("ttluser")

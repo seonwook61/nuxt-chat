@@ -16,19 +16,21 @@ public interface KafkaConsumerService {
 
     /**
      * Handle incoming chat message from Kafka
+     * - Deserialize JSON to ChatMessage
      * - Cache in Redis
      * - Broadcast via WebSocket
      *
-     * @param message ChatMessage from Kafka
+     * @param messageJson JSON string of ChatMessage from Kafka
      */
-    void handleChatMessage(ChatMessage message);
+    void handleChatMessage(String messageJson);
 
     /**
      * Handle incoming chat event from Kafka
+     * - Deserialize JSON to ChatEvent
      * - Update presence in Redis
      * - Broadcast via WebSocket
      *
-     * @param event ChatEvent from Kafka
+     * @param eventJson JSON string of ChatEvent from Kafka
      */
-    void handleChatEvent(ChatEvent event);
+    void handleChatEvent(String eventJson);
 }

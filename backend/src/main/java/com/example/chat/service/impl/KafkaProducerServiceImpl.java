@@ -51,7 +51,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
             Message<String> kafkaMessage = MessageBuilder
                 .withPayload(messageJson)
                 .setHeader(KafkaHeaders.TOPIC, KafkaConfig.TOPIC_CHAT_MESSAGE)
-                .setHeader(KafkaHeaders.MESSAGE_KEY, partitionKey)
+                .setHeader(KafkaHeaders.KEY, partitionKey)
                 .build();
 
             kafkaTemplate.send(kafkaMessage);
@@ -87,7 +87,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
             Message<String> kafkaMessage = MessageBuilder
                 .withPayload(eventJson)
                 .setHeader(KafkaHeaders.TOPIC, KafkaConfig.TOPIC_CHAT_EVENT)
-                .setHeader(KafkaHeaders.MESSAGE_KEY, partitionKey)
+                .setHeader(KafkaHeaders.KEY, partitionKey)
                 .build();
 
             kafkaTemplate.send(kafkaMessage);

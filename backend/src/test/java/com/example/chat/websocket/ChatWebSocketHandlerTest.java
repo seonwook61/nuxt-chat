@@ -1,7 +1,7 @@
 package com.example.chat.websocket;
 
-import com.example.chat.model.ChatEvent;
-import com.example.chat.model.ChatMessage;
+import com.example.chat.dto.ChatEvent;
+import com.example.chat.dto.ChatMessage;
 import com.example.chat.service.KafkaProducerService;
 import com.example.chat.service.RedisCacheService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -119,7 +119,7 @@ class ChatWebSocketHandlerTest {
         });
 
         ChatEvent joinEvent = ChatEvent.builder()
-            .id(UUID.randomUUID().toString())
+            .messageId(UUID.randomUUID())
             .roomId(roomId)
             .userId(userId)
             .username("joinuser")
@@ -175,7 +175,7 @@ class ChatWebSocketHandlerTest {
         });
 
         ChatMessage message = ChatMessage.builder()
-            .id(UUID.randomUUID().toString())
+            .messageId(UUID.randomUUID())
             .roomId(roomId)
             .userId("user-send-1")
             .username("sender")
@@ -231,7 +231,7 @@ class ChatWebSocketHandlerTest {
         });
 
         ChatEvent leaveEvent = ChatEvent.builder()
-            .id(UUID.randomUUID().toString())
+            .messageId(UUID.randomUUID())
             .roomId(roomId)
             .userId(userId)
             .username("leaveuser")
@@ -303,7 +303,7 @@ class ChatWebSocketHandlerTest {
         });
 
         ChatMessage message = ChatMessage.builder()
-            .id(UUID.randomUUID().toString())
+            .messageId(UUID.randomUUID())
             .roomId(roomId)
             .userId("user-broadcast")
             .username("broadcaster")

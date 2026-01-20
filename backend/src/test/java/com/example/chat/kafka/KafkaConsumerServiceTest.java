@@ -1,8 +1,8 @@
 package com.example.chat.kafka;
 
 import com.example.chat.config.KafkaConfig;
-import com.example.chat.model.ChatEvent;
-import com.example.chat.model.ChatMessage;
+import com.example.chat.dto.ChatEvent;
+import com.example.chat.dto.ChatMessage;
 import com.example.chat.service.KafkaConsumerService;
 import com.example.chat.service.RedisCacheService;
 import com.fasterxml.jackson.databind.ObjectMapper;
