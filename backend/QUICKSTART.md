@@ -58,10 +58,10 @@ redis     redis     running   0.0.0.0:6379->6379/tcp
 cd backend
 
 # 빌드 (테스트 제외)
-./gradlew clean build -x test
+.\gradlew clean build -x test
 
 # 실행
-./gradlew bootRun
+.\gradlew bootRun
 ```
 
 **예상 로그:**

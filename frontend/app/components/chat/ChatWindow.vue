@@ -30,6 +30,7 @@
     <MessageList
       :messages="messages"
       :current-user-id="currentUserId"
+      :current-username="currentUser.username"
       class="flex-1"
     />
 

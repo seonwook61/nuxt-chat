@@ -1,11 +1,30 @@
 <template>
   <div class="bg-white border-t border-gray-200 px-4 py-3">
-    <div class="flex items-end gap-2">
-      <!-- Emoji Button (Phase 3.5) -->
+    <div class="flex items-end gap-2 relative">
+      <!-- Emoji Picker Popup -->
+      <div
+        v-if="showEmojiPicker"
+        class="absolute bottom-14 left-0 bg-white rounded-lg shadow-xl border border-gray-200 p-3 z-50"
+        @click.stop
+      >
+        <div class="grid grid-cols-8 gap-1 max-w-xs">
+          <button
+            v-for="emoji in commonEmojis"
+            :key="emoji"
+            type="button"
+            class="text-2xl hover:bg-gray-100 rounded p-1 transition-colors"
+            @click="insertEmoji(emoji)"
+          >
+            {{ emoji }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Emoji Button -->
       <button
         type="button"
         class="flex-shrink-0 w-9 h-9 flex items-center justify-center text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
-        disabled
+        @click.stop="toggleEmojiPicker"
       >
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -67,12 +86,37 @@ const message = ref('')
 const isSending = ref(false)
 const inputRef = ref<HTMLTextAreaElement | null>(null)
 const textareaHeight = ref('40px')
+const showEmojiPicker = ref(false)
+
+// Common emojis for quick access
+const commonEmojis = [
+  '😀', '😂', '🤣', '😊', '😍', '🥰', '😘', '😎',
+  '🤔', '😅', '😆', '😉', '😌', '😏', '🙂', '😐',
+  '😑', '😶', '🙄', '😬', '😮', '😯', '😲', '😳',
+  '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '😱',
+  '😨', '😰', '😥', '😓', '🤗', '🤩', '🥳', '😇',
+  '👍', '👎', '👌', '✌️', '🤞', '🤝', '👏', '🙌',
+  '💪', '🙏', '👋', '🤚', '✋', '🖐️', '👊', '✊',
+  '❤️', '💕', '💖', '💗', '💓', '💞', '💝', '💘',
+  '🔥', '✨', '💯', '💫', '⭐', '🌟', '💥', '💢'
+]
 
 const canSend = computed(() => {
   return message.value.trim().length > 0 &&
          message.value.length <= 1000 &&
          !isSending.value
 })
+
+const toggleEmojiPicker = () => {
+  showEmojiPicker.value = !showEmojiPicker.value
+}
+
+const insertEmoji = (emoji: string) => {
+  message.value += emoji
+  showEmojiPicker.value = false
+  inputRef.value?.focus()
+  adjustHeight()
+}
 
 const adjustHeight = () => {
   if (!inputRef.value) return
@@ -98,5 +142,20 @@ const sendMessage = async () => {
     isSending.value = false
     inputRef.value?.focus()
   }
+}
+
+// Close emoji picker when clicking outside
+if (process.client) {
+  onMounted(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showEmojiPicker.value) {
+        showEmojiPicker.value = false
+      }
+    }
+    document.addEventListener('click', handleClickOutside)
+    onBeforeUnmount(() => {
+      document.removeEventListener('click', handleClickOutside)
+    })
+  })
 }
 </script>

@@ -23,10 +23,10 @@ import java.util.Map;
  * Kafka configuration for chat message streaming
  * - Producer: Chat messages from REST API
  * - Consumer: WebSocket fanout, persistence, events
- * - Topics: chat.message.v1, chat.event.v1
+ * - Topics: chat.message.v1, chat.event.v1, chat.reaction.v1
  * - Key: roomId (for partition affinity)
  *
- * Implementation in Phase 1
+ * Implementation in Phase 1 & Phase 3.2
  */
 @Configuration
 @EnableKafka
@@ -35,6 +35,7 @@ public class KafkaConfig {
     // Topic definitions (TRD: 02-trd.md)
     public static final String TOPIC_CHAT_MESSAGE = "chat.message.v1";
     public static final String TOPIC_CHAT_EVENT = "chat.event.v1";
+    public static final String TOPIC_CHAT_REACTION = "chat.reaction.v1";
 
     // Consumer groups
     public static final String GROUP_WEBSOCKET_FANOUT = "websocket-fanout";

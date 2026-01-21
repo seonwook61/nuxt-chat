@@ -1,4 +1,4 @@
-import type { Message, ChatEvent, JoinRoomPayload, LeaveRoomPayload, SendMessagePayload } from '~/types/chat'
+import type { Message, ChatEvent, JoinRoomPayload, LeaveRoomPayload, SendMessagePayload, MessageReaction } from '~/types/chat'
 
 export const useChatRoom = (roomId: Ref<string> | string) => {
   const chatStore = useChatStore()
@@ -30,9 +30,9 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
     }
   })
 
-  const handleRoomMessage = (payload: Message | ChatEvent) => {
-    // Check if it's a ChatMessage or ChatEvent
-    if ('messageId' in payload) {
+  const handleRoomMessage = (payload: Message | ChatEvent | MessageReaction) => {
+    // Check if it's a ChatMessage, ChatEvent, or MessageReaction
+    if ('messageId' in payload && 'content' in payload) {
       // It's a ChatMessage
       const message = payload as Message
 
@@ -40,16 +40,69 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
       if (!messages.value.find(m => m.messageId === message.messageId)) {
         messages.value.push(message)
       }
+    } else if ('reactionId' in payload) {
+      // It's a MessageReaction
+      const reaction = payload as MessageReaction
+      handleReactionUpdate(reaction)
     } else if ('eventType' in payload) {
       // It's a ChatEvent
       const event = payload as ChatEvent
 
-      if (event.eventType === 'USER_JOINED') {
-        onlineUsers.value++
-      } else if (event.eventType === 'USER_LEFT') {
-        onlineUsers.value = Math.max(0, onlineUsers.value - 1)
+      // Use onlineCount from metadata if available (more accurate)
+      if (event.metadata && typeof event.metadata.onlineCount === 'number') {
+        onlineUsers.value = event.metadata.onlineCount
+      } else {
+        // Fallback to increment/decrement
+        if (event.eventType === 'USER_JOINED') {
+          onlineUsers.value++
+        } else if (event.eventType === 'USER_LEFT') {
+          onlineUsers.value = Math.max(0, onlineUsers.value - 1)
+        }
       }
     }
+  }
+
+  const handleReactionUpdate = (reaction: MessageReaction) => {
+    // Find the message and update its reactions
+    const message = messages.value.find(m => m.messageId === reaction.messageId)
+    if (!message) {
+      console.warn('[ChatRoom] Message not found for reaction:', reaction.messageId)
+      return
+    }
+
+    // Initialize reactions object if it doesn't exist
+    if (!message.reactions) {
+      message.reactions = {}
+    }
+
+    const emoji = reaction.emoji
+    const userId = reaction.userId
+
+    if (reaction.action === 'ADD') {
+      // Add reaction
+      if (!message.reactions[emoji]) {
+        message.reactions[emoji] = []
+      }
+      if (!message.reactions[emoji].includes(userId)) {
+        message.reactions[emoji].push(userId)
+      }
+    } else if (reaction.action === 'REMOVE') {
+      // Remove reaction
+      if (message.reactions[emoji]) {
+        message.reactions[emoji] = message.reactions[emoji].filter(id => id !== userId)
+        // Remove emoji key if no more users
+        if (message.reactions[emoji].length === 0) {
+          delete message.reactions[emoji]
+        }
+      }
+    }
+
+    console.log('[ChatRoom] Reaction updated:', {
+      messageId: reaction.messageId,
+      emoji: reaction.emoji,
+      action: reaction.action,
+      reactions: message.reactions
+    })
   }
 
   const joinRoom = async () => {
@@ -58,11 +111,20 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
     }
 
     try {
-      // 1. Subscribe to room topic FIRST
+      // 1. Load message history from PostgreSQL
+      const { fetchMessageHistory } = useMessageHistory()
+      const history = await fetchMessageHistory(_roomId.value, 50)
+
+      // Add history messages to the local state
+      messages.value = history
+
+      console.log(`[ChatRoom] Loaded ${history.length} messages from history`)
+
+      // 2. Subscribe to room topic FIRST
       const destination = `/topic/room/${_roomId.value}`
       subscriptionId.value = socket.subscribe(destination, handleRoomMessage)
 
-      // 2. Send join message AFTER subscription
+      // 3. Send join message AFTER subscription
       // Format timestamp as LocalDateTime (yyyy-MM-dd'T'HH:mm:ss) without 'Z'
       const now = new Date()
       const timestamp = now.toISOString().substring(0, 19) // Remove milliseconds and 'Z'

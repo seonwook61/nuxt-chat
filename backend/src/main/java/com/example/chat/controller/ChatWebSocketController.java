@@ -3,6 +3,7 @@ package com.example.chat.controller;
 import com.example.chat.config.WebSocketConfig;
 import com.example.chat.dto.ChatEvent;
 import com.example.chat.dto.ChatMessage;
+import com.example.chat.dto.MessageReaction;
 import com.example.chat.service.KafkaProducerService;
 import com.example.chat.service.RedisCacheService;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,9 @@ import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 /**
  * WebSocket Controller for Real-Time Chat
  *
@@ -20,8 +24,9 @@ import org.springframework.stereotype.Controller;
  * - /app/chat.join -> handleJoin -> /topic/room/{roomId}
  * - /app/chat.send -> handleMessage -> /topic/room/{roomId}
  * - /app/chat.leave -> handleLeave -> /topic/room/{roomId}
+ * - /app/chat.reaction -> handleReaction -> /topic/room/{roomId}
  *
- * TDD Phase 1: Implementation to make tests GREEN
+ * TDD Phase 1 & Phase 3.2: Implementation to make tests GREEN
  */
 @Controller
 @RequiredArgsConstructor
@@ -48,6 +53,15 @@ public class ChatWebSocketController {
             // Add user to Redis room presence
             redisCacheService.addUserToRoom(event.getRoomId(), event.getUserId());
 
+            // Get current online user count
+            long onlineCount = redisCacheService.getRoomUserCount(event.getRoomId());
+
+            // Add online count to metadata
+            if (event.getMetadata() == null) {
+                event.setMetadata(new java.util.HashMap<>());
+            }
+            event.getMetadata().put("onlineCount", onlineCount);
+
             // Send join event to Kafka
             kafkaProducerService.sendEvent(event);
 
@@ -55,7 +69,7 @@ public class ChatWebSocketController {
             String topic = WebSocketConfig.WS_TOPIC_PREFIX + "/room/" + event.getRoomId();
             messagingTemplate.convertAndSend(topic, event);
 
-            log.debug("User join event broadcast: roomId={}", event.getRoomId());
+            log.debug("User join event broadcast: roomId={}, onlineCount={}", event.getRoomId(), onlineCount);
         } catch (Exception e) {
             log.error("Error handling user join: {}", e.getMessage(), e);
         }
@@ -102,6 +116,15 @@ public class ChatWebSocketController {
             // Remove user from Redis room presence
             redisCacheService.removeUserFromRoom(event.getRoomId(), event.getUserId());
 
+            // Get current online user count (after removal)
+            long onlineCount = redisCacheService.getRoomUserCount(event.getRoomId());
+
+            // Add online count to metadata
+            if (event.getMetadata() == null) {
+                event.setMetadata(new java.util.HashMap<>());
+            }
+            event.getMetadata().put("onlineCount", onlineCount);
+
             // Send leave event to Kafka
             kafkaProducerService.sendEvent(event);
 
@@ -109,9 +132,60 @@ public class ChatWebSocketController {
             String topic = WebSocketConfig.WS_TOPIC_PREFIX + "/room/" + event.getRoomId();
             messagingTemplate.convertAndSend(topic, event);
 
-            log.debug("User leave event broadcast: roomId={}", event.getRoomId());
+            log.debug("User leave event broadcast: roomId={}, onlineCount={}", event.getRoomId(), onlineCount);
         } catch (Exception e) {
             log.error("Error handling user leave: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Handle message reaction (add/remove)
+     * - Update Redis reaction cache
+     * - Send reaction event via Kafka
+     * - Broadcast to all room subscribers
+     *
+     * @param reaction MessageReaction from client
+     */
+    @MessageMapping("/chat.reaction")
+    public void handleReaction(MessageReaction reaction) {
+        log.info("Reaction {} from user {} on message {} in room {}",
+                reaction.getEmoji(), reaction.getUserId(), reaction.getMessageId(), reaction.getRoomId());
+
+        try {
+            // Generate reaction ID and timestamp if not provided
+            if (reaction.getReactionId() == null) {
+                reaction.setReactionId(UUID.randomUUID());
+            }
+            if (reaction.getTimestamp() == null) {
+                reaction.setTimestamp(LocalDateTime.now());
+            }
+
+            // Update Redis based on action
+            if ("ADD".equals(reaction.getAction())) {
+                redisCacheService.addReaction(
+                        reaction.getMessageId(),
+                        reaction.getEmoji(),
+                        reaction.getUserId()
+                );
+            } else if ("REMOVE".equals(reaction.getAction())) {
+                redisCacheService.removeReaction(
+                        reaction.getMessageId(),
+                        reaction.getEmoji(),
+                        reaction.getUserId()
+                );
+            }
+
+            // Send reaction event to Kafka for persistence/analytics
+            kafkaProducerService.sendReaction(reaction);
+
+            // Broadcast to all subscribers of the room topic
+            String topic = WebSocketConfig.WS_TOPIC_PREFIX + "/room/" + reaction.getRoomId();
+            messagingTemplate.convertAndSend(topic, reaction);
+
+            log.debug("Reaction broadcast: messageId={}, emoji={}, action={}, roomId={}",
+                    reaction.getMessageId(), reaction.getEmoji(), reaction.getAction(), reaction.getRoomId());
+        } catch (Exception e) {
+            log.error("Error handling reaction: {}", e.getMessage(), e);
         }
     }
 

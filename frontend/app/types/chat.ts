@@ -1,3 +1,23 @@
+// Emoji reaction types (Instagram-style)
+export type EmojiType = 'HEART' | 'LAUGH' | 'WOW' | 'SAD' | 'THUMBS_UP' | 'FIRE'
+
+// Reaction summary for a message
+export interface ReactionSummary {
+  reactions: Record<EmojiType, string[]> // emoji -> array of userIds
+}
+
+// Message reaction event
+export interface MessageReaction {
+  reactionId: string
+  messageId: string
+  roomId: string
+  userId: string
+  username: string
+  emoji: EmojiType
+  timestamp: string
+  action: 'ADD' | 'REMOVE'
+}
+
 // Chat message types (Backend DTO format)
 export interface Message {
   messageId: string
@@ -8,6 +28,7 @@ export interface Message {
   content: string
   timestamp: string // ISO 8601 format from backend
   type: 'CHAT' | 'TEXT'
+  reactions?: Record<string, string[]> // NEW: emoji -> array of userIds
 
   // NEW: UI 표시용 (computed)
   isOwn?: boolean              // 본인 메시지 여부
@@ -68,6 +89,17 @@ export interface LeaveRoomPayload {
   userId: string
   timestamp: string
   metadata: Record<string, any>
+}
+
+export interface ReactionPayload {
+  reactionId: string
+  messageId: string
+  roomId: string
+  userId: string
+  username: string
+  emoji: EmojiType
+  timestamp: string
+  action: 'ADD' | 'REMOVE'
 }
 
 // NEW: 사용자 프로필 인터페이스

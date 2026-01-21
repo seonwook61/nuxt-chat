@@ -21,6 +21,8 @@
       v-for="message in processedMessages"
       :key="message.messageId"
       :message="message"
+      :current-user-id="currentUserId"
+      :current-username="currentUsername"
     />
   </div>
 </template>
@@ -30,11 +32,17 @@ import type { Message } from '~/types/chat'
 import MessageBubble from './MessageBubble.vue'
 
 interface Props {
-  messages: Message[]
+  messages: readonly Message[]
   currentUserId: string
+  currentUsername?: string
 }
 
 const props = defineProps<Props>()
+
+// Get currentUsername from chatStore if not provided
+const currentUsername = computed(() => {
+  return props.currentUsername || 'Anonymous'
+})
 
 const scrollContainer = ref<HTMLElement | null>(null)
 

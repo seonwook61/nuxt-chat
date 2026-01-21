@@ -3,7 +3,9 @@ package com.example.chat.service.impl;
 import com.example.chat.config.KafkaConfig;
 import com.example.chat.dto.ChatEvent;
 import com.example.chat.dto.ChatMessage;
+import com.example.chat.dto.MessageReaction;
 import com.example.chat.service.KafkaConsumerService;
+import com.example.chat.service.MessagePersistenceService;
 import com.example.chat.service.RedisCacheService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -16,10 +18,9 @@ import org.springframework.stereotype.Service;
  * Kafka Consumer Service Implementation
  *
  * Consumes messages and events from Kafka topics:
- * - chat.message.v1: Process incoming chat messages (cache in Redis)
+ * - chat.message.v1: Process incoming chat messages (cache in Redis, persist to PostgreSQL)
  * - chat.event.v1: Process user presence events (update presence)
- *
- * TDD Phase 1: Implementation to make tests GREEN
+ * - chat.reaction.v1: Process message reactions (cache in Redis, persist to PostgreSQL)
  */
 @Service
 @RequiredArgsConstructor
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Service;
 public class KafkaConsumerServiceImpl implements KafkaConsumerService {
 
     private final RedisCacheService redisCacheService;
+    private final MessagePersistenceService persistenceService;
     private final ObjectMapper objectMapper;
 
     /**
@@ -52,7 +54,10 @@ public class KafkaConsumerServiceImpl implements KafkaConsumerService {
             // Cache the message in Redis for recent messages
             redisCacheService.cacheRecentMessage(message.getRoomId(), message);
 
-            log.debug("Cached message in Redis: roomId={}", message.getRoomId());
+            // Persist the message to PostgreSQL
+            persistenceService.saveMessage(message);
+
+            log.debug("Cached and persisted message: roomId={}", message.getRoomId());
         } catch (Exception e) {
             log.error("Error processing chat message: {}", e.getMessage(), e);
             // Don't throw exception - continue processing next message
@@ -85,6 +90,40 @@ public class KafkaConsumerServiceImpl implements KafkaConsumerService {
             log.debug("Processed event: eventType={}", event.getEventType());
         } catch (Exception e) {
             log.error("Error processing chat event: {}", e.getMessage(), e);
+            // Don't throw exception - continue processing next message
+        }
+    }
+
+    /**
+     * Handle incoming message reaction from Kafka
+     * - Deserialize JSON to MessageReaction
+     * - Persist to PostgreSQL
+     * - Update Redis cache
+     *
+     * @param reactionJson JSON string of MessageReaction from Kafka
+     */
+    @KafkaListener(
+        topics = KafkaConfig.TOPIC_CHAT_REACTION,
+        groupId = KafkaConfig.GROUP_PERSIST_STORE,
+        containerFactory = "kafkaListenerContainerFactory"
+    )
+    public void handleMessageReaction(@Payload String reactionJson) {
+        try {
+            MessageReaction reaction = objectMapper.readValue(reactionJson, MessageReaction.class);
+
+            log.debug("Received reaction from Kafka: messageId={}, userId={}, emoji={}, action={}",
+                reaction.getMessageId(), reaction.getUserId(), reaction.getEmoji(), reaction.getAction());
+
+            // Persist based on action
+            if ("ADD".equals(reaction.getAction())) {
+                persistenceService.saveReaction(reaction);
+            } else if ("REMOVE".equals(reaction.getAction())) {
+                persistenceService.removeReaction(reaction);
+            }
+
+            log.debug("Persisted reaction: action={}", reaction.getAction());
+        } catch (Exception e) {
+            log.error("Error processing message reaction: {}", e.getMessage(), e);
             // Don't throw exception - continue processing next message
         }
     }
