@@ -19,9 +19,10 @@ import java.util.UUID;
  * Redis Key Schema:
  * - room:{roomId}:recent - Recent messages (List)
  * - room:{roomId}:users - Active users (Set)
+ * - room:{roomId}:typing - Typing users (Set, TTL 5s)
  * - message:{messageId}:reactions - Message reactions (Hash: emoji -> Set<userId>)
  *
- * Implementation in Phase 1 & Phase 3.2
+ * Implementation in Phase 1, Phase 3.2, Phase 5
  */
 public interface RedisCacheService {
 
@@ -105,4 +106,38 @@ public interface RedisCacheService {
      * @return Map of messageId -> ReactionSummary
      */
     Map<UUID, ReactionSummary> getReactionsForMessages(List<UUID> messageIds);
+
+    /**
+     * Add a user to typing set
+     * - Stores in Redis Set: room:{roomId}:typing
+     * - TTL: 5 seconds (auto-cleanup for abandoned typing states)
+     *
+     * @param roomId Room ID
+     * @param userId User ID who is typing
+     */
+    void addTypingUser(String roomId, String userId);
+
+    /**
+     * Remove a user from typing set
+     *
+     * @param roomId Room ID
+     * @param userId User ID who stopped typing
+     */
+    void removeTypingUser(String roomId, String userId);
+
+    /**
+     * Get all typing users in a room
+     *
+     * @param roomId Room ID
+     * @return Set of user IDs who are currently typing
+     */
+    Set<String> getTypingUsers(String roomId);
+
+    /**
+     * Get count of users in a room
+     *
+     * @param roomId Room ID
+     * @return Number of users in the room
+     */
+    long getRoomUserCount(String roomId);
 }

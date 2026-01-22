@@ -4,6 +4,7 @@ import com.example.chat.config.WebSocketConfig;
 import com.example.chat.dto.ChatEvent;
 import com.example.chat.dto.ChatMessage;
 import com.example.chat.dto.MessageReaction;
+import com.example.chat.dto.TypingIndicator;
 import com.example.chat.service.KafkaProducerService;
 import com.example.chat.service.RedisCacheService;
 import lombok.RequiredArgsConstructor;
@@ -186,6 +187,42 @@ public class ChatWebSocketController {
                     reaction.getMessageId(), reaction.getEmoji(), reaction.getAction(), reaction.getRoomId());
         } catch (Exception e) {
             log.error("Error handling reaction: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Handle typing indicator events
+     * - Update Redis typing state (auto-expiring)
+     * - Broadcast to all room subscribers
+     *
+     * @param indicator TypingIndicator from client
+     */
+    @MessageMapping("/chat.typing")
+    public void handleTyping(TypingIndicator indicator) {
+        log.info("Typing event: user {} in room {}, typing={}",
+                indicator.getUserId(), indicator.getRoomId(), indicator.getIsTyping());
+
+        try {
+            // Set timestamp if not provided
+            if (indicator.getTimestamp() == null) {
+                indicator.setTimestamp(LocalDateTime.now());
+            }
+
+            // Update Redis typing state
+            if (Boolean.TRUE.equals(indicator.getIsTyping())) {
+                redisCacheService.addTypingUser(indicator.getRoomId(), indicator.getUserId());
+            } else {
+                redisCacheService.removeTypingUser(indicator.getRoomId(), indicator.getUserId());
+            }
+
+            // Broadcast to all subscribers of the room topic
+            String topic = WebSocketConfig.WS_TOPIC_PREFIX + "/room/" + indicator.getRoomId();
+            messagingTemplate.convertAndSend(topic, indicator);
+
+            log.debug("Typing indicator broadcast: roomId={}, userId={}, typing={}",
+                    indicator.getRoomId(), indicator.getUserId(), indicator.getIsTyping());
+        } catch (Exception e) {
+            log.error("Error handling typing indicator: {}", e.getMessage(), e);
         }
     }
 

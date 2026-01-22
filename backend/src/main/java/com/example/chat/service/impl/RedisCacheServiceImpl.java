@@ -340,4 +340,95 @@ public class RedisCacheServiceImpl implements RedisCacheService {
             return new HashSet<>();
         }
     }
+
+    /**
+     * Add a user to typing set
+     *
+     * @param roomId Room ID
+     * @param userId User ID who is typing
+     */
+    @Override
+    public void addTypingUser(String roomId, String userId) {
+        try {
+            String key = buildTypingKey(roomId);
+            redisTemplate.opsForSet().add(key, userId);
+
+            // Set TTL to 5 seconds (auto-cleanup)
+            redisTemplate.expire(key, 5, TimeUnit.SECONDS);
+
+            log.debug("Added typing user {} to room {}", userId, roomId);
+        } catch (Exception e) {
+            log.error("Error adding typing user to room {}: {}", roomId, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Remove a user from typing set
+     *
+     * @param roomId Room ID
+     * @param userId User ID who stopped typing
+     */
+    @Override
+    public void removeTypingUser(String roomId, String userId) {
+        try {
+            String key = buildTypingKey(roomId);
+            redisTemplate.opsForSet().remove(key, userId);
+
+            log.debug("Removed typing user {} from room {}", userId, roomId);
+        } catch (Exception e) {
+            log.error("Error removing typing user from room {}: {}", roomId, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get all typing users in a room
+     *
+     * @param roomId Room ID
+     * @return Set of user IDs who are currently typing
+     */
+    @Override
+    public Set<String> getTypingUsers(String roomId) {
+        try {
+            String key = buildTypingKey(roomId);
+            Set<Object> members = redisTemplate.opsForSet().members(key);
+
+            if (members == null || members.isEmpty()) {
+                return new HashSet<>();
+            }
+
+            // Convert Objects to Strings
+            return members.stream()
+                .filter(member -> member instanceof String)
+                .map(member -> (String) member)
+                .collect(Collectors.toSet());
+        } catch (Exception e) {
+            log.error("Error retrieving typing users for room {}: {}", roomId, e.getMessage(), e);
+            return new HashSet<>();
+        }
+    }
+
+    /**
+     * Get count of users in a room
+     *
+     * @param roomId Room ID
+     * @return Number of users in the room
+     */
+    @Override
+    public long getRoomUserCount(String roomId) {
+        try {
+            String key = buildRoomUsersKey(roomId);
+            Long count = redisTemplate.opsForSet().size(key);
+            return count != null ? count : 0L;
+        } catch (Exception e) {
+            log.error("Error retrieving user count for room {}: {}", roomId, e.getMessage(), e);
+            return 0L;
+        }
+    }
+
+    /**
+     * Build Redis key for typing users
+     */
+    private String buildTypingKey(String roomId) {
+        return "room:" + roomId + ":typing";
+    }
 }

@@ -1,4 +1,4 @@
-import type { Message, ChatEvent, JoinRoomPayload, LeaveRoomPayload, SendMessagePayload, MessageReaction } from '~/types/chat'
+import type { Message, ChatEvent, JoinRoomPayload, LeaveRoomPayload, SendMessagePayload, MessageReaction, TypingIndicator } from '~/types/chat'
 
 export const useChatRoom = (roomId: Ref<string> | string) => {
   const chatStore = useChatStore()
@@ -9,6 +9,9 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
   const onlineUsers = ref(0)
   const subscriptionId = ref<string | null>(null)
   const isJoined = ref(false)
+
+  // Typing indicator handler (will be set by ChatWindow)
+  let typingHandler: ((data: any) => void) | null = null
 
   // 아바타 색상 생성 함수
   const generateAvatarColor = (userId: string) => {
@@ -30,7 +33,16 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
     }
   })
 
-  const handleRoomMessage = (payload: Message | ChatEvent | MessageReaction) => {
+  const handleRoomMessage = (payload: Message | ChatEvent | MessageReaction | TypingIndicator) => {
+    // Check if it's a TypingIndicator first
+    if ('isTyping' in payload) {
+      // It's a TypingIndicator - delegate to typing handler
+      if (typingHandler) {
+        typingHandler(payload)
+      }
+      return
+    }
+
     // Check if it's a ChatMessage, ChatEvent, or MessageReaction
     if ('messageId' in payload && 'content' in payload) {
       // It's a ChatMessage
@@ -238,6 +250,14 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
     leaveRoom()
   })
 
+  /**
+   * Register typing event handler
+   * This allows ChatWindow to pass typing events to useTyping composable
+   */
+  const setTypingHandler = (handler: (data: any) => void) => {
+    typingHandler = handler
+  }
+
   return {
     messages: readonly(messages),
     onlineUsers: readonly(onlineUsers),
@@ -245,6 +265,7 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
     currentUser,
     joinRoom,
     leaveRoom,
-    sendMessage
+    sendMessage,
+    setTypingHandler
   }
 }

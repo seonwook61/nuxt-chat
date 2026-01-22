@@ -102,6 +102,15 @@ export interface ReactionPayload {
   action: 'ADD' | 'REMOVE'
 }
 
+// Typing indicator event (Phase 5)
+export interface TypingIndicator {
+  roomId: string
+  userId: string
+  username: string
+  isTyping: boolean
+  timestamp: string
+}
+
 // NEW: 사용자 프로필 인터페이스
 export interface UserProfile {
   userId: string

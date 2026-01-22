@@ -42,7 +42,7 @@
           class="w-full resize-none rounded-full border border-gray-300 px-4 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           :style="{ height: textareaHeight }"
           :disabled="isSending"
-          @input="adjustHeight"
+          @input="handleInput"
           @keydown.enter.exact.prevent="sendMessage"
         />
 
@@ -80,6 +80,7 @@
 <script setup lang="ts">
 const emit = defineEmits<{
   send: [content: string]
+  typing: []
 }>()
 
 const message = ref('')
@@ -124,6 +125,14 @@ const adjustHeight = () => {
   inputRef.value.style.height = 'auto'
   const newHeight = Math.min(inputRef.value.scrollHeight, 150)
   textareaHeight.value = `${newHeight}px`
+}
+
+const handleInput = () => {
+  adjustHeight()
+  // Emit typing event when user is typing
+  if (message.value.trim().length > 0) {
+    emit('typing')
+  }
 }
 
 const sendMessage = async () => {

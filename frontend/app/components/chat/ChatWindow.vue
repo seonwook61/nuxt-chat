@@ -34,14 +34,24 @@
       class="flex-1"
     />
 
+    <!-- Typing Indicator -->
+    <TypingIndicator
+      :typing-text="typingText"
+      :is-typing="isTyping"
+    />
+
     <!-- Message Input -->
-    <MessageInput @send="handleSendMessage" />
+    <MessageInput
+      @send="handleSendMessage"
+      @typing="handleTyping"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import MessageList from './MessageList.vue'
 import MessageInput from './MessageInput.vue'
+import TypingIndicator from './TypingIndicator.vue'
 
 interface Props {
   roomId: string
@@ -59,14 +69,35 @@ console.log('[ChatWindow] ChatRoom initialized:', chatRoom)
 
 const messageContainer = ref<HTMLElement | null>(null)
 
-const { messages, onlineUsers, currentUser, joinRoom, leaveRoom, sendMessage } = chatRoom
+const { messages, onlineUsers, currentUser, joinRoom, leaveRoom, sendMessage, setTypingHandler } = chatRoom
 console.log('[ChatWindow] Messages:', messages.value, 'Online:', onlineUsers.value)
 
 // Get current user ID from chatRoom composable
 const currentUserId = computed(() => currentUser.value.userId)
 
+// Initialize typing indicator with reactive values
+const typingRoomId = computed(() => props.roomId)
+const typingUserId = computed(() => currentUser.value.userId)
+const typingUsername = computed(() => currentUser.value.username)
+
+const typing = useTyping(
+  typingRoomId.value,
+  typingUserId.value,
+  typingUsername.value
+)
+
+const { startTyping, stopTyping, handleIncomingTyping, typingText, isTyping } = typing
+
+// Connect typing handler to room subscription
+setTypingHandler(handleIncomingTyping)
+
 const handleSendMessage = (content: string) => {
+  stopTyping() // Stop typing when message is sent
   sendMessage(content)
+}
+
+const handleTyping = () => {
+  startTyping()
 }
 
 // Auto-scroll to bottom when new messages arrive
