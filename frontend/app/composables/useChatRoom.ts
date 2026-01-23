@@ -1,4 +1,4 @@
-import type { Message, ChatEvent, JoinRoomPayload, LeaveRoomPayload, SendMessagePayload, MessageReaction, TypingIndicator } from '~/types/chat'
+import type { Message, ChatEvent, JoinRoomPayload, LeaveRoomPayload, SendMessagePayload, MessageReaction, TypingIndicator, ReadReceipt } from '~/types/chat'
 
 export const useChatRoom = (roomId: Ref<string> | string) => {
   const chatStore = useChatStore()
@@ -12,6 +12,9 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
 
   // Typing indicator handler (will be set by ChatWindow)
   let typingHandler: ((data: any) => void) | null = null
+
+  // Read receipt handler (will be set by ChatWindow)
+  let readReceiptHandler: ((data: any) => void) | null = null
 
   // 아바타 색상 생성 함수
   const generateAvatarColor = (userId: string) => {
@@ -33,12 +36,21 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
     }
   })
 
-  const handleRoomMessage = (payload: Message | ChatEvent | MessageReaction | TypingIndicator) => {
+  const handleRoomMessage = (payload: Message | ChatEvent | MessageReaction | TypingIndicator | ReadReceipt) => {
     // Check if it's a TypingIndicator first
     if ('isTyping' in payload) {
       // It's a TypingIndicator - delegate to typing handler
       if (typingHandler) {
         typingHandler(payload)
+      }
+      return
+    }
+
+    // Check if it's a ReadReceipt (has messageId, userId, timestamp but NOT content or reactionId)
+    if ('messageId' in payload && 'userId' in payload && !('content' in payload) && !('reactionId' in payload)) {
+      // It's a ReadReceipt - delegate to read receipt handler
+      if (readReceiptHandler) {
+        readReceiptHandler(payload)
       }
       return
     }
@@ -258,6 +270,14 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
     typingHandler = handler
   }
 
+  /**
+   * Register read receipt event handler
+   * This allows ChatWindow to pass read receipt events to useReadReceipts composable
+   */
+  const setReadReceiptHandler = (handler: (data: any) => void) => {
+    readReceiptHandler = handler
+  }
+
   return {
     messages: readonly(messages),
     onlineUsers: readonly(onlineUsers),
@@ -266,6 +286,7 @@ export const useChatRoom = (roomId: Ref<string> | string) => {
     joinRoom,
     leaveRoom,
     sendMessage,
-    setTypingHandler
+    setTypingHandler,
+    setReadReceiptHandler
   }
 }

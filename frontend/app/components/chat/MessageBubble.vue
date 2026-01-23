@@ -81,13 +81,21 @@
         :reactions="message.reactions"
       />
 
-      <!-- Timestamp (마지막 메시지만) -->
-      <span
+      <!-- Timestamp + Read Receipt (본인 메시지에만 표시) -->
+      <div
         v-if="message.showTimestamp"
-        class="text-xs text-gray-500 mt-1 px-1"
+        class="flex items-center gap-1 text-xs text-gray-500 mt-1 px-1"
       >
-        {{ formatTime(message.timestamp) }}
-      </span>
+        <span>{{ formatTime(message.timestamp) }}</span>
+
+        <!-- Read Receipt Icon (본인 메시지에만) -->
+        <ReadReceiptIcon
+          v-if="message.isOwn"
+          :is-read="(message.readCount ?? 0) > 0"
+          :read-count="message.readCount"
+          :show-read-count="false"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -97,6 +105,7 @@ import type { Message } from '~/types/chat'
 import UserAvatar from './UserAvatar.vue'
 import ReactionPicker from '../ReactionPicker.vue'
 import MessageReactions from '../MessageReactions.vue'
+import ReadReceiptIcon from '../ReadReceiptIcon.vue'
 
 interface Props {
   message: Message

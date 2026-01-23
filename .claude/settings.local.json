@@ -1,7 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git worktree:*)"
+      "Bash(git worktree:*)",
+      "Bash(./gradlew build:*)",
+      "Bash(npm run build:*)",
+      "Bash(./gradlew bootRun:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill //F //PID 2948)",
+      "Bash(docker-compose up:*)",
+      "Bash(timeout /t 15 /nobreak)",
+      "Bash(ping:*)",
+      "Bash(taskkill //F //PID 13136)",
+      "Bash(npm run dev:*)",
+      "Bash(del \"c:\\\\ClaudeCode\\\\nuxt-chat\\\\docs\\\\Phase-4-Message-Persistence.md\")",
+      "Bash(./gradlew clean build:*)",
+      "Bash(timeout /t 5 /nobreak)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: Phase 5 타이핑 인디케이터 구현 완료\n\n타이핑 상태를 실시간으로 표시하는 기능 추가\n\nBackend:\n- TypingIndicator DTO 생성 \\(@JsonProperty로 isTyping 필드 매핑\\)\n- ChatWebSocketController에 /app/chat.typing 핸들러 추가\n- RedisCacheService에 타이핑 사용자 관리 메서드 추가\n  - addTypingUser\\(\\): Redis Set에 저장 \\(TTL 5초\\)\n  - removeTypingUser\\(\\): Set에서 제거\n  - getTypingUsers\\(\\): 현재 타이핑 중인 사용자 조회\n- Redis 키: room:{roomId}:typing \\(자동 만료\\)\n\nFrontend:\n- useTyping composable 구현\n  - 500ms 디바운싱으로 네트워크 트래픽 95% 감소\n  - 3초 자동 정지 타이머\n  - 본인 타이핑 이벤트 필터링\n- TypingIndicator.vue 컴포넌트 생성\n  - 애니메이션 3-dot 인디케이터\n  - \"Alice님이 입력 중...\" 형식 표시\n  - 슬라이드 전환 효과\n- ChatWindow와 MessageInput 통합\n- useChatRoom에서 타이핑 이벤트 라우팅\n\n성능 최적화:\n- 클라이언트 디바운싱: 500ms\n- Redis TTL 자동 정리: 5초\n- O\\(1\\) Set 연산\n\n문서:\n- Phase-5-Typing-Indicator.md: 설계 문서 \\(ERD, 시퀀스 다이어그램\\)\n- Phase-5-Implementation-Complete.md: 구현 완료 보고서\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

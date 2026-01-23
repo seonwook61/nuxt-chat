@@ -4,8 +4,10 @@ import com.example.chat.config.WebSocketConfig;
 import com.example.chat.dto.ChatEvent;
 import com.example.chat.dto.ChatMessage;
 import com.example.chat.dto.MessageReaction;
+import com.example.chat.dto.ReadReceiptDTO;
 import com.example.chat.dto.TypingIndicator;
 import com.example.chat.service.KafkaProducerService;
+import com.example.chat.service.ReadReceiptService;
 import com.example.chat.service.RedisCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +28,8 @@ import java.util.UUID;
  * - /app/chat.send -> handleMessage -> /topic/room/{roomId}
  * - /app/chat.leave -> handleLeave -> /topic/room/{roomId}
  * - /app/chat.reaction -> handleReaction -> /topic/room/{roomId}
+ * - /app/chat.typing -> handleTyping -> /topic/room/{roomId}
+ * - /app/chat.read -> handleReadReceipt -> /topic/room/{roomId}
  *
  * TDD Phase 1 & Phase 3.2: Implementation to make tests GREEN
  */
@@ -36,6 +40,7 @@ public class ChatWebSocketController {
 
     private final KafkaProducerService kafkaProducerService;
     private final RedisCacheService redisCacheService;
+    private final ReadReceiptService readReceiptService;
     private final SimpMessagingTemplate messagingTemplate;
 
     /**
@@ -223,6 +228,55 @@ public class ChatWebSocketController {
                     indicator.getRoomId(), indicator.getUserId(), indicator.getIsTyping());
         } catch (Exception e) {
             log.error("Error handling typing indicator: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Handle read receipt events (Phase 6)
+     * - Mark message as read in PostgreSQL
+     * - Update Redis cache (last read position)
+     * - Broadcast to all room subscribers
+     *
+     * Flow:
+     * 1. Client sends read receipt when message becomes visible
+     * 2. Service checks cache to prevent duplicates
+     * 3. Save to database and update cache
+     * 4. Broadcast to room subscribers (for updating UI checkmarks)
+     *
+     * @param receipt ReadReceiptDTO from client
+     */
+    @MessageMapping("/chat.read")
+    public void handleReadReceipt(ReadReceiptDTO receipt) {
+        log.info("Read receipt: user {} read message {} in room {}",
+                receipt.getUserId(), receipt.getMessageId(), receipt.getRoomId());
+
+        try {
+            // Set timestamp if not provided
+            if (receipt.getTimestamp() == null) {
+                receipt.setTimestamp(LocalDateTime.now());
+            }
+
+            // Mark message as read (returns null if duplicate)
+            ReadReceiptDTO result = readReceiptService.markAsRead(
+                    receipt.getRoomId(),
+                    receipt.getUserId(),
+                    receipt.getMessageId()
+            );
+
+            // Only broadcast if this is a new read event (not duplicate)
+            if (result != null) {
+                // Broadcast to all subscribers of the room topic
+                String topic = WebSocketConfig.WS_TOPIC_PREFIX + "/room/" + receipt.getRoomId();
+                messagingTemplate.convertAndSend(topic, result);
+
+                log.debug("Read receipt broadcast: messageId={}, userId={}, roomId={}",
+                        result.getMessageId(), result.getUserId(), result.getRoomId());
+            } else {
+                log.debug("Duplicate read receipt skipped: messageId={}, userId={}",
+                        receipt.getMessageId(), receipt.getUserId());
+            }
+        } catch (Exception e) {
+            log.error("Error handling read receipt: {}", e.getMessage(), e);
         }
     }
 

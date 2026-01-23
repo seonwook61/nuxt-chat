@@ -35,6 +35,10 @@ export interface Message {
   showAvatar?: boolean         // 아바타 표시 여부 (연속 메시지)
   showTimestamp?: boolean      // 타임스탬프 표시 여부
   showUsername?: boolean       // 사용자명 표시 여부
+
+  // Phase 6: Read receipts
+  readBy?: string[]            // 읽은 사용자 ID 목록
+  readCount?: number           // 읽은 사람 수
 }
 
 // Chat event types (Backend DTO format)
@@ -108,6 +112,14 @@ export interface TypingIndicator {
   userId: string
   username: string
   isTyping: boolean
+  timestamp: string
+}
+
+// Read receipt event (Phase 6)
+export interface ReadReceipt {
+  roomId: string
+  userId: string
+  messageId: string
   timestamp: string
 }
 

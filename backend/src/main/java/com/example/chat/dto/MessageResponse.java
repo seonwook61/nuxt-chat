@@ -7,6 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -55,4 +58,22 @@ public class MessageResponse {
      */
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime timestamp;
+
+    /**
+     * Reactions on this message (emoji -> list of userIds)
+     * Phase 3.2: Reaction feature
+     */
+    private Map<String, List<String>> reactions;
+
+    /**
+     * List of user IDs who read this message
+     * Phase 6: Read receipts
+     */
+    private Set<String> readBy;
+
+    /**
+     * Number of users who read this message
+     * Phase 6: Read receipts
+     */
+    private Integer readCount;
 }

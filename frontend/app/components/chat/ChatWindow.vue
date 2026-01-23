@@ -69,11 +69,36 @@ console.log('[ChatWindow] ChatRoom initialized:', chatRoom)
 
 const messageContainer = ref<HTMLElement | null>(null)
 
-const { messages, onlineUsers, currentUser, joinRoom, leaveRoom, sendMessage, setTypingHandler } = chatRoom
+const { messages, onlineUsers, currentUser, joinRoom, leaveRoom, sendMessage, setTypingHandler, setReadReceiptHandler } = chatRoom
 console.log('[ChatWindow] Messages:', messages.value, 'Online:', onlineUsers.value)
 
 // Get current user ID from chatRoom composable
 const currentUserId = computed(() => currentUser.value.userId)
+
+// Initialize read receipts with reactive values
+const readReceipts = useReadReceipts(
+  props.roomId,
+  currentUserId.value
+)
+
+const { handleIncomingReadReceipt, getReadCount, initializeReadStatus } = readReceipts
+
+// Connect read receipt handler to room subscription
+setReadReceiptHandler(handleIncomingReadReceipt)
+
+// Initialize read status when messages are loaded (from history)
+watch(messages, (newMessages) => {
+  if (newMessages.length > 0) {
+    initializeReadStatus(newMessages)
+  }
+}, { immediate: true })
+
+// Update message read counts when read status changes
+watch(() => readReceipts.readStatusMap.value, () => {
+  messages.value.forEach((msg) => {
+    msg.readCount = getReadCount(msg.messageId)
+  })
+}, { deep: true })
 
 // Initialize typing indicator with reactive values
 const typingRoomId = computed(() => props.roomId)
@@ -100,12 +125,22 @@ const handleTyping = () => {
   startTyping()
 }
 
-// Auto-scroll to bottom when new messages arrive
+// Auto-mark visible messages as read (Intersection Observer)
+// Mark the last visible message as read when scrolling
 watch(messages, () => {
   nextTick(() => {
     if (messageContainer.value) {
       const container = messageContainer.value
       container.scrollTop = container.scrollHeight
+
+      // Mark the last message as read if it's from another user
+      if (messages.value.length > 0) {
+        const lastMessage = messages.value[messages.value.length - 1]
+        // Only mark messages from other users as read
+        if (lastMessage.userId !== currentUserId.value) {
+          readReceipts.markAsRead(lastMessage.messageId)
+        }
+      }
     }
   })
 })

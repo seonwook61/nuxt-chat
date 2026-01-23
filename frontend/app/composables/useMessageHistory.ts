@@ -31,7 +31,10 @@ export const useMessageHistory = () => {
           content: msg.content,
           timestamp: timestamp.toISOString(),
           type: msg.type || 'TEXT',
-          reactions: {},
+          reactions: msg.reactions || {},
+          // Phase 6: Read receipt status from backend
+          readBy: msg.readBy || [],
+          readCount: msg.readCount || 0,
           // UI-specific fields (will be calculated by MessageList)
           isOwn: false,
           showAvatar: false,
